@@ -232,7 +232,7 @@ def _kw_state(keyword, text):
 # A place in a result's title or description: a capitalised word after "in", "aus", "bei", "nahe",
 # "rund um", "Raum" or "Region" (German results such as "oil tank disposal in Hildesheim" or "in the Peine area").
 _PLACE = re.compile(r"\b(?i:in|im|aus|bei|nahe|um)\s+(?:(?i:raum|region|landkreis|kreis)\s+)?([A-ZÄÖÜ][\wäöüß-]+)")
-_NOT_PLACE = {"der", "die", "das", "dem", "den", "deutschland", "kürze", "minuten", "stunden", "zukunft",
+_NOT_PLACE = {"der", "die", "das", "dem", "den", "deutschland", "kuerze", "minuten", "stunden", "zukunft",
               "zeiten", "ordnung", "sachen", "bezug", "folge", "form", "frage", "zusammenarbeit", "verbindung",
               "the", "a", "an", "raum", "region", "landkreis", "kreis", "ihrer", "ihre", "ihrem", "ihren",
               "ihr", "unserer", "unserem", "unseren", "deiner", "deinem", "naehe", "kombination",
@@ -325,7 +325,7 @@ def cmd_tfidf(args):
         err = f"  [not analysed: {r['crawl_error']}]" if r.get("crawl_error") else ""
         refs = r.get("referring_domains")
         refs_note = " (1/1: possibly 'no data', check with backlink_check)" if str(refs) == "1" and str(r.get("backlinks")) == "1" else ""
-        print(f"{r.get('rank'):>2}  {r.get('domain')}  {(r.get('title') or '')[:80]}{err}")
+        print(f"{str(r.get('rank') or '-'):>2}  {r.get('domain')}  {(r.get('title') or '')[:80]}{err}")
         print(f"    {r.get('url')}  | ~{r.get('word_count')} words | {refs} ref. domains{refs_note}"
               f" | server response {r.get('load_time')} s")
 
@@ -350,7 +350,7 @@ def cmd_tfidf(args):
     for r in results:
         found = {w for w in _places(f"{r.get('title') or ''} {r.get('description') or ''}")
                  if not any(_same_word(w, k) for k in kw_words)}
-        places.update(found)
+        places.update(sorted(found))  # ties keep a stable order across runs
         placed_results += bool(found)
     addr_words = {w for r in results for w in _norm(_host(r.get("url"))) if w not in ("de", "com", "at", "ch", "net", "org")}
     if placed_results >= 3:
@@ -449,7 +449,7 @@ def cmd_links(args):
     if top:
         print(f"\n## Strongest active follow links, one per site (top {args.top} by rating)")
         for l in top:
-            print(f"{l.get('rating'):>3}  {l.get('origin_domain')}  anchor '{l.get('anchor_text')}'")
+            print(f"{str(l.get('rating') if l.get('rating') is not None else '-'):>3}  {l.get('origin_domain')}  anchor '{l.get('anchor_text')}'")
             print(f"     {l.get('origin_url')}  ({(l.get('origin_title') or '')[:70]})")
     else:
         print("\n(no active follow links listed)")

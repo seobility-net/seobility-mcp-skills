@@ -78,6 +78,8 @@ ROLES = {
 PATTERN_REPORTS = {"internal-link-targets-on-redirects"}
 # Reports with one row per anchor text: each anchor text is a unit (`--anchor` picks one).
 PER_ANCHOR = {"link-anchor-text-duplicates-for-different-pages"}
+# Reports whose `rows[].page` is a foreign link target and whose own page is `items[].page`.
+OWN_IN_ITEMS = {"external-link-target-problems"}
 LANG = re.compile(r"^/(?:[a-z]{2})(?:-[a-z]{2})?(?=/)", re.I)
 
 
@@ -110,8 +112,8 @@ def load(path):
     else:
         with open(path, encoding="utf-8") as fh:
             payload = json.load(fh)
-    data = payload.get("data", payload)
-    rows = data.get("rows")
+    data = payload.get("data", payload) if isinstance(payload, dict) else None
+    rows = data.get("rows") if isinstance(data, dict) else None
     if not isinstance(rows, list):
         sys.exit("Unexpected payload: expected 'rows' under 'data'. Is this a get_report result?")
     pagination = payload.get("pagination", data.get("pagination", {})) or {}
@@ -160,13 +162,19 @@ def same_site(host, own):
     return bool(host) and (host == own or host.endswith("." + own) or own.endswith("." + host))
 
 
-def own_host(rows, override=None):
-    """The project's own host: whatever most URLs in the payload agree on."""
+def own_host(rows, override=None, analysis=""):
+    """The project's own host: whatever most URLs in the payload agree on.
+
+    On external-link reports every row is one foreign target plus one own page, so a plain
+    vote ties and the first foreign host won. There only `items[].page` is the site's own.
+    """
     if override:
         return host_of(override) or host_of("//" + override)
     seen = Counter()
     for row in rows:
-        for url in urls_in(row):
+        urls = ([i.get("page") for i in row.get("items") or [] if i.get("type") == "page"]
+                if analysis in OWN_IN_ITEMS else urls_in(row))
+        for url in (u for u in urls if isinstance(u, str)):
             host = host_of(url)
             if host:
                 seen[host] += 1
@@ -250,13 +258,18 @@ def defects_of(row, analysis=""):
 
 
 def inside_limits(ev):
-    """True when the row's measured value sits inside the limits it carries, else False/None."""
+    """True when the row's measured values sit inside every limit it carries, False when one
+    is outside, None when it carries no limit. A title inside the character limits can still
+    break the pixel limits."""
+    inside = None
     for kind in ("character_length", "pixel_length"):
         got = ev.get(kind + "_calculated")
         lo, hi = ev.get(kind + "_min"), ev.get(kind + "_max")
         if got is not None and (lo is not None or hi is not None):
-            return (lo is None or got >= lo) and (hi is None or got <= hi)
-    return None
+            if (lo is not None and got < lo) or (hi is not None and got > hi):
+                return False
+            inside = True
+    return inside
 
 
 def group(rows, host, analysis):
@@ -281,7 +294,7 @@ def group(rows, host, analysis):
                 else:
                     unit["props"].setdefault(prop, val)
         for problem in row.get("problems") or []:
-            if problem.get("value") is not None:
+            if problem.get("name") and problem.get("value") is not None:
                 units[problem["name"]]["detail"][str(problem["value"])] += 1
     return units
 
@@ -306,12 +319,20 @@ def threshold_line(unit):
 
 
 def write_url_file(out_dir, ticket_id, analysis, defect, urls, affected, retrieved, crawl,
-                   role=""):
+                   role="", taken=None):
     """One file per unit. With --id it is named after the ticket (SEO-01-urls.txt), which is
-    what the ticket's Scope line references; without, after the report and defect key."""
+    what the ticket's Scope line references; without, after the report and defect key.
+
+    `taken` holds the names already written in this run, compared case-insensitively (macOS and
+    Windows): "read more" and "read-more!" reduce to the same name and must not overwrite."""
     os.makedirs(out_dir, exist_ok=True)
-    stem = ticket_id or f"{analysis}-{defect}"
-    name = re.sub(r"[^A-Za-z0-9]+", "-", stem).strip("-") + "-urls.txt"
+    stem = re.sub(r"[^A-Za-z0-9]+", "-", ticket_id or f"{analysis}-{defect}").strip("-")
+    name, n = stem + "-urls.txt", 1
+    while taken is not None and name.lower() in taken:
+        n += 1
+        name = f"{stem}-{n}-urls.txt"
+    if taken is not None:
+        taken.add(name.lower())
     path = os.path.join(out_dir, name)
     with open(path, "w", encoding="utf-8") as fh:
         head = " · ".join(x for x in (ticket_id, f"{analysis} / {defect}",
@@ -343,13 +364,15 @@ def main():
     ap.add_argument("--id", help="ticket id for the URL file name, e.g. SEO-01 (with --defect)")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args()
+    if args.id and not (args.defect or args.anchor):
+        ap.error("--id names one ticket's URL file: use it with --defect or --anchor")
 
     rows, filters, pagination = load_all(args.paths)
-    host = own_host(rows, args.host)
+    host = own_host(rows, args.host, args.analysis)
     counts = filter_counts(filters)
     units = group(rows, host, args.analysis)
 
-    total = pagination.get("total", len(rows))
+    total = pagination.get("total") or len(rows)
     limit = pagination.get("limit", 100) or 100
     # `total` is NOT always a row count: on grouped reports (one row per anchor text, per
     # duplicate set) it counts the pages behind the groups, so total > len(rows) proves nothing.
@@ -358,7 +381,7 @@ def main():
     offset = pagination.get("offset", 0) or 0
     capped = pagination.get("rows_on_page", len(rows)) >= limit and offset + limit < total
 
-    out = []
+    out, taken = [], set()
     for defect, unit in sorted(units.items(), key=lambda kv: -len(kv[1]["urls"])):
         wanted = args.anchor or args.defect
         if wanted and defect.casefold() != wanted.casefold():
@@ -387,7 +410,7 @@ def main():
             out[-1]["url_file"] = write_url_file(args.out_dir, args.id, args.analysis, defect,
                                                  urls,
                                                  findings_total, len(urls), args.crawl or "",
-                                                 out[-1]["url_role"])
+                                                 out[-1]["url_role"], taken)
 
     patterns, head_share = (target_patterns(rows) if args.analysis in PATTERN_REPORTS
                             else ([], 0.0))
