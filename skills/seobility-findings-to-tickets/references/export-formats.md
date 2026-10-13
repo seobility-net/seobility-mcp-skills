@@ -131,7 +131,7 @@ One file per ticket, plain text, one URL per line, named after the ticket id:
 `tickets/SEO-01-urls.txt`. The script writes it:
 
 ```bash
-python scripts/tickets.py <saved-report.json> --analysis heading-h1-problems     --defect h1_toshort --id SEO-01 --crawl 2026-09-18 --out-dir tickets/
+python3 scripts/tickets.py <saved-report.json> --analysis heading-h1-problems     --defect h1_toshort --id SEO-01 --crawl 2026-09-18 --out-dir tickets/
 ```
 
 Without `--id` the file is named after report and defect instead, which no ticket references, so

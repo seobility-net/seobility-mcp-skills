@@ -46,6 +46,9 @@ Each section below ends in a fix the user can carry out. None of them is carried
 
 ## Before you spend a call
 
+The helper scripts named below live in this skill's folder (`${CLAUDE_SKILL_DIR}` in Claude Code).
+Run them as `python3 <that folder>/scripts/<script>.py`, wherever the current directory is.
+
 **1. Resolve the project, and do not guess.** `list_projects` is one call and already carries
 four of this skill's findings for every project at once: `is_verified`, `is_scheduled_crawl`,
 `health_status`, `total_crawls`, plus `pages_crawled`, `finished_date` and `created_date`. It
@@ -100,7 +103,7 @@ Then take the newest crawls from `list_crawls` (`limit: 10` is enough) and the p
 ceiling, and run:
 
 ```bash
-python scripts/setup_check.py crawls <saved-file> --page-limit <max_pages.limit> --budget-reached <true|false>
+python3 scripts/setup_check.py crawls <saved-file> --page-limit <max_pages.limit> --budget-reached <true|false>
 ```
 
 If a result arrived inline instead of as a saved file, write it to a file first (or pipe it to the script and pass `-` as the path). If the host tells you to read an oversized result in full, don't: run the script on the saved file instead.
@@ -166,7 +169,7 @@ told.
 ### 3. Keyword coverage — three numbers, and two of them are not what they look like
 
 ```bash
-python scripts/setup_check.py keywords <saved-file> --room <available_for_venture> --created <created_date>
+python3 scripts/setup_check.py keywords <saved-file> --room <available_for_venture> --created <created_date>
 ```
 
 `list_keywords` overflows on any real project (168,000 characters at 335 keywords), so it goes to
@@ -219,7 +222,7 @@ project with four monitored keywords. This is the call behind the reported 110�
 blowouts, and it reproduces on the smallest project in the account.
 
 ```bash
-python scripts/setup_check.py suggestions <saved-file> --top 10 --min-rating 40
+python3 scripts/setup_check.py suggestions <saved-file> --top 10 --min-rating 40
 ```
 
 `reason: "alreadyranking"` is the signal: the domain already surfaces for this term and it is not
@@ -344,7 +347,7 @@ It is not content.
 Each gap ends in something the user can do, naming the setting:
 
 - Not: "You should look at your crawl settings."
-- But: "The crawl captured 10,013 pages and ran into the page limit of 10,000. Increase the limit to 20,000 in your crawl settings — 
+- But: "The crawl captured 10,013 pages and ran into the page limit of 10,000. Increase the limit to 20,000 in your crawl settings —
 or limit the crawl to a certain area so the SEO score becomes comparable again."
 
 Where a gap has a skill behind it, offer it: keyword gaps → keyword research, a fresh audit →

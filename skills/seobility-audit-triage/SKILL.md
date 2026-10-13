@@ -30,6 +30,9 @@ an order someone can start on Monday. The output is three to six fix groups, not
 
 ## Before you spend a call
 
+The helper scripts named below live in this skill's folder (`${CLAUDE_SKILL_DIR}` in Claude Code).
+Run them as `python3 <that folder>/scripts/<script>.py`, wherever the current directory is.
+
 1. **Resolve the project.** `list_projects`. Accounts often hold several projects with the same
    name covering different scopes of one site - one test account had three, with 522, 2,703 and
    10,013 pages crawled. Disambiguate by `url`, `pages_crawled` and `finished_date`, never by
@@ -119,7 +122,7 @@ counts, read:
 payload and run:
 
 ```bash
-python scripts/triage.py rank <saved-file> --indexed <indexed_pages>
+python3 scripts/triage.py rank <saved-file> --indexed <indexed_pages>
 ```
 
 If a result arrived inline instead of as a saved file, write it to a file first (or pipe it to the script and pass `-` as the path). If the host tells you to read an oversized result in full, don't: run the script on the saved file instead.
@@ -197,7 +200,7 @@ The script's `RESOLVE THESE YOURSELF` block lists only the questions that are op
 the order - usually one or two. Re-rank once you know:
 
 ```bash
-python scripts/triage.py rank <file> --assume heading-h1-problems=template
+python3 scripts/triage.py rank <file> --assume heading-h1-problems=template
 ```
 
 If the user volunteers how their site is built, take their answer over your reading.
@@ -264,7 +267,7 @@ A fix on 939 pages is either the largest job in the audit or a ten-minute templa
 nothing in the counts says which. For every report you plan, pull its rows and run:
 
 ```bash
-python scripts/triage.py cluster <saved-report> --label <analysis> --indexed <indexed_pages>
+python3 scripts/triage.py cluster <saved-report> --label <analysis> --indexed <indexed_pages>
 ```
 
 Pass the report's slug as `--label` and always pass `--indexed`. The verdict is one of

@@ -73,6 +73,9 @@ proof that nobody searches.
 
 ## Before you spend a call
 
+The helper scripts named below live in this skill's folder (`${CLAUDE_SKILL_DIR}` in Claude Code).
+Run them as `python3 <that folder>/scripts/<script>.py`, wherever the current directory is.
+
 1. **Resolve the project.** `list_projects`. If the user has more than one and has not named
    one, ask — but **do not offer them a list of names**. Accounts routinely hold several projects
    with the identical name for different scopes of the same site. Disambiguate with `url`,
@@ -129,7 +132,7 @@ characters). It gets written to a file. Do not read that file into context — r
 with `--screen` it also reads each candidate's own page (step 3):
 
 ```bash
-python scripts/ranking_opportunities.py <saved-file> --screen --scope <project url>
+python3 scripts/ranking_opportunities.py <saved-file> --screen --scope <project url>
 ```
 
 `--scope` is the project's URL from `list_projects`; a start page such as `/de/wiki/start` is
@@ -191,7 +194,7 @@ do not pass the gate: then the own position in that list cannot be confirmed eit
 Only when the host already saved the SERP as a file, run:
 
 ```bash
-python scripts/ranking_opportunities.py --serp <saved-serp-file> --expect-rank <position from list_keywords>
+python3 scripts/ranking_opportunities.py --serp <saved-serp-file> --expect-rank <position from list_keywords>
 ```
 
 Never run the check on a partial copy. Local-pack rows don't count. The script prints one other
@@ -361,7 +364,7 @@ sales page. So read what each of the top 3 promises in the search results:
 1. **Read title, meta description and H1 of each top-3 page**, in this order of routes:
    - **The script first**, all three URLs in one run. It is free and prints about 1 kB per page:
      ```bash
-     python scripts/ranking_opportunities.py --promise <url1> <url2> <url3>
+     python3 scripts/ranking_opportunities.py --promise <url1> <url2> <url3>
      ```
    - **`seo_check(website=url)` only for a page the script marks FAILED** because the site blocks
      scripts (403, bot wall). It reads those pages, but **is one of the expensive live calls** and

@@ -6,8 +6,8 @@ description: >-
   backlinks, new and resolved crawl issues, uptime events), filters out the noise, and names
   the few changes worth acting on. Use when someone asks "what changed this week", "what
   happened since last week", "give me the deltas", "what should I work on this week" (the
-  default owner of this open question), "my weekly SEO check", or the same in any other language; 
-  also for a short standing update for a client or team channel, or what moved after a release. 
+  default owner of this open question), "my weekly SEO check", or the same in any other language;
+  also for a short standing update for a client or team channel, or what moved after a release.
   Do NOT trigger for finding ranking opportunities (seobility-ranking-opportunities), working through the full issue
   backlog (seobility-audit-triage), checking whether the project is set up well enough to
   trust (seobility-setup-check), or diagnosing one ranking drop in depth.
@@ -39,13 +39,16 @@ Console connection. Anything about traffic has to come from the user's own expor
 
 ## Before you spend a call
 
+The helper scripts named below live in this skill's folder (`${CLAUDE_SKILL_DIR}` in Claude Code).
+Run them as `python3 <that folder>/scripts/<script>.py`, wherever the current directory is.
+
 0. **Read the previous run.** The check-in has a memory: one small file per project per run,
    under `~/.seobility-checkin/<project_id>/<date>.json` (another folder: the
    `SEOBILITY_CHECKIN_HOME` environment variable or `--home`). Read it before anything else,
    because the job bar in step 7 is defined against it.
 
    ```bash
-   python scripts/checkin_state.py previous <project_id>
+   python3 scripts/checkin_state.py previous <project_id>
    ```
 
    No file means this is the first check-in for this project. Say so once in the report, and
@@ -140,7 +143,7 @@ Its `delta` arrives as a string and is a **percentage change**, not a change in 
 points — verified by arithmetic on two projects. `"51.8"` means +51.8%, and reporting it as
 points overstates a small week by a factor of fifteen. It can also carry a thousands
 separator (`"10,366.7"`), so `float()` on it fails: run
-`python scripts/weekly_deltas.py overview <file>` (or `-` for stdin), which parses it and
+`python3 scripts/weekly_deltas.py overview <file>` (or `-` for stdin), which parses it and
 suppresses a percentage whose base is under 1 visibility point. Do not quote a percentage
 for a project whose keywords were added inside the window either.
 
@@ -163,7 +166,7 @@ report.
 characters). It gets written to a file. Do not read that file — run the script:
 
 ```bash
-python scripts/weekly_deltas.py rankings <saved-file> --limit 8
+python3 scripts/weekly_deltas.py rankings <saved-file> --limit 8
 ```
 
 If a result arrived inline instead of as a saved file, write it to a file first (or pipe it to the script and pass `-` as the path). If the host tells you to read an oversized result in full, don't: run the script on the saved file instead.
@@ -268,7 +271,7 @@ rows, so on a busy domain it covers roughly the last week and on a quiet one it 
 Filter by date yourself and name the window:
 
 ```bash
-python scripts/weekly_deltas.py backlinks <new-file> --lost <lost-file> --days 7
+python3 scripts/weekly_deltas.py backlinks <new-file> --lost <lost-file> --days 7
 ```
 
 The dates to filter on differ between the two: `found_date` for new links, `lost_date` for lost
@@ -481,8 +484,8 @@ wrong.
 Build it from the winners/losers payload, add the rest, then save it:
 
 ```bash
-python scripts/checkin_state.py build <project_id> --winners <file> --overview <file> --device <desktop|mobile> --out <state.json>
-python scripts/checkin_state.py save <project_id> --file <state.json>
+python3 scripts/checkin_state.py build <project_id> --winners <file> --overview <file> --device <desktop|mobile> --out <state.json>
+python3 scripts/checkin_state.py save <project_id> --file <state.json>
 ```
 
 `build` stores every mover above the noise floor and the drop-out group (pass the device the report details); you add windows,

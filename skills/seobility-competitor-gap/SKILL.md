@@ -72,6 +72,9 @@ list on its own helps them little. What they want is the comparison and what fol
 
 ## Before you spend a call
 
+The helper scripts named below live in this skill's folder (`${CLAUDE_SKILL_DIR}` in Claude Code).
+Run them as `python3 <that folder>/scripts/<script>.py`, wherever the current directory is.
+
 1. **Keyword, page, market.** Take them from the request or from the hand-over of
    `seobility-ranking-opportunities` (keyword, position, ranking URL, market; see "The hand-off
    block" below). The market is a
@@ -187,7 +190,7 @@ It usually arrives **inline** (35,000 to 45,000 characters). Read it there: the 
 the script on it. If the host saved it to a file, run:
 
 ```bash
-python scripts/competitor_gap.py tfidf <saved-file>
+python3 scripts/competitor_gap.py tfidf <saved-file>
 ```
 
 **Read the term data with these traps in mind** (all verified, see `references/tool-notes.md`):
@@ -305,7 +308,7 @@ its own, lower bar for topics and formats (3 of 4 or 5 pages read).
 In one run (free, about 1-3 kB per page):
 
 ```bash
-python scripts/competitor_gap.py pages <our URL> <competitor 1> <competitor 2> <competitor 3> --keyword "<keyword>"
+python3 scripts/competitor_gap.py pages <our URL> <competitor 1> <competitor 2> <competitor 3> --keyword "<keyword>"
 ```
 
 It prints for each page: title, description, H1, word count of the body text, the H2/H3 outline in
@@ -388,7 +391,7 @@ sites came inline at about 30k, one with 107 was saved at 113k). Inline: read `m
 link list only when links to the page are a clear difference. Saved: do not read it; run:
 
 ```bash
-python scripts/competitor_gap.py links <saved-file>
+python3 scripts/competitor_gap.py links <saved-file>
 ```
 
 It prints the two counts and the strongest active follow links, one per linking site. On a page

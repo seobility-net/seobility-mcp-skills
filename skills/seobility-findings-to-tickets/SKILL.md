@@ -53,6 +53,9 @@ backlog is audit triage's job. Both skills use the same rule; if it changes, it 
 
 ## Before you spend a call
 
+The helper scripts named below live in this skill's folder (`${CLAUDE_SKILL_DIR}` in Claude Code).
+Run them as `python3 <that folder>/scripts/<script>.py`, wherever the current directory is.
+
 - **Resolve the project.** `list_projects`. Accounts often hold several projects with the same
   name for different scopes of one site: disambiguate by `url`, `pages_crawled` and
   `finished_date`, never by name. The full list returns every project on the account (about
@@ -312,8 +315,8 @@ If a result arrived inline instead of as a saved file, write it to a file first 
 Large reports overflow the tool result into a file. Do not read it into context; run the script:
 
 ```bash
-python scripts/tickets.py <saved-report.json> --analysis <slug> --limit 10
-python scripts/tickets.py <saved-report.json> --analysis <slug> --defect title_long \
+python3 scripts/tickets.py <saved-report.json> --analysis <slug> --limit 10
+python3 scripts/tickets.py <saved-report.json> --analysis <slug> --defect title_long \
     --id SEO-03 --crawl 2026-09-20 --out-dir tickets/
 ```
 
