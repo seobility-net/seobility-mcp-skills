@@ -36,7 +36,7 @@ The easiest way is to sign in with your Seobility account. There's no API key to
 
 **Claude (web and desktop app):**
 
-1. Customize → Connectors → + Add → Add custom connector.
+1. Settings → Connectors → Add → Add custom connector.
 2. Name `Seobility`, Remote MCP server URL `https://api.seobility.net/mcp`, then click Continue.
 3. Keep the default settings, click Add, then click Connect.
 4. Seobility opens in your browser. Click **Allow access**, and you're back in Claude.
