@@ -22,8 +22,7 @@ the project data behind them.
 
 ## What you need
 
-- **A Seobility account with MCP access.** The Seobility MCP is available on our paid plans. You'll
-  find your API key in your Seobility account settings.
+- **A Seobility account with MCP access.** The Seobility MCP is available on our paid plans.
 - **An AI assistant that supports skills and MCP servers**, for example Claude Code or the Claude
   desktop app. The skills were written and tested with Claude.
 - **Python 3.** Some skills run a small helper script to sort through large result lists. The
@@ -33,7 +32,26 @@ the project data behind them.
 
 ### 1. Connect the Seobility MCP
 
-Add the Seobility MCP server to your assistant:
+The easiest way is to sign in with your Seobility account. There's no API key to create or store.
+
+**Claude (web and desktop app):**
+
+1. Customize → Connectors → + Add → Add custom connector.
+2. Name `Seobility`, Remote MCP server URL `https://api.seobility.net/mcp`, then click Continue.
+3. Keep the default settings, click Add, then click Connect.
+4. Seobility opens in your browser. Click **Allow access**, and you're back in Claude.
+
+**Claude Code:**
+
+```bash
+claude mcp add --transport http seobility-mcp https://api.seobility.net/mcp
+```
+
+Then start Claude Code, run `/mcp`, select `seobility-mcp` and choose Authenticate. Seobility opens in
+your browser. Click **Allow access**, and you're connected.
+
+**Prefer an API key?** Use this if your assistant doesn't support signing in. Create a personal API
+key in Seobility under Account Settings → MCP and send it as a request header:
 
 - **URL:** `https://api.seobility.net/mcp`
 - **Header:** `X-Seobility-Authorization: <your API key>`
@@ -62,8 +80,9 @@ git clone https://github.com/seobility-net/seobility-mcp-skills.git
 cp -r seobility-mcp-skills/skills/* ~/.claude/skills/
 ```
 
-**Claude desktop app and claude.ai:** zip a skill folder (for example `seobility-ranking-opportunities`) and
-upload it in your Claude settings under Skills.
+**Claude desktop app and claude.ai:** download this repository (Code → Download ZIP) and unzip it.
+Then zip the skill folder you want to use (for example `skills/seobility-audit-triage`) on its own
+and upload it in your Claude settings under Skills.
 
 ### 3. Ask
 
