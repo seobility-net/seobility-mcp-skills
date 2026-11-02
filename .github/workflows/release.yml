@@ -1,0 +1,33 @@
+# Builds one ZIP per skill and publishes them as a GitHub release.
+# Push a tag such as v1.0.0 to run it. The ZIPs upload directly in Claude under Skills.
+name: Release skill ZIPs
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zip each skill folder
+        run: |
+          mkdir dist
+          cd skills
+          for skill in */; do
+            name="${skill%/}"
+            zip -r "../dist/${name}.zip" "$name" -x "*/__pycache__/*" "*.pyc"
+          done
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --title "$GITHUB_REF_NAME" \
+            --notes "One ZIP per skill. In Claude (web or desktop app), upload the ZIP of the skill you want under Skills. For Claude Code, see the README."

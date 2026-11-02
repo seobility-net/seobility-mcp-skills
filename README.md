@@ -80,9 +80,9 @@ git clone https://github.com/seobility-net/seobility-mcp-skills.git
 cp -r seobility-mcp-skills/skills/* ~/.claude/skills/
 ```
 
-**Claude desktop app and claude.ai:** download this repository (Code → Download ZIP) and unzip it.
-Then zip the skill folder you want to use (for example `skills/seobility-audit-triage`) on its own
-and upload it in your Claude settings under Skills.
+**Claude desktop app and claude.ai:** download the ZIP of the skill you want from the
+[latest release](https://github.com/seobility-net/seobility-mcp-skills/releases/latest) (for example
+`seobility-audit-triage.zip`) and upload it in your Claude settings under Skills. No need to unzip it.
 
 ### 3. Ask
 
