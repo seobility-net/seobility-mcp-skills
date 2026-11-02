@@ -193,6 +193,8 @@ def parse_assumptions(pairs):
     for pair in pairs or []:
         report, _, klass = pair.partition("=")
         report, klass = report.strip(), klass.strip()
+        if not report:
+            raise SystemExit(f"--assume '{pair}' names no report. Use REPORT=CLASS.")
         if not klass or (klass not in COST and klass not in UNSCORED):
             raise SystemExit(f"Unknown effort class '{klass}'. "
                              f"Use one of: {', '.join(sorted(set(COST) | UNSCORED))}")
@@ -285,11 +287,16 @@ def swing(rows, limit):
 
 def rank(args):
     payload = unwrap(read_json(args.problems))
-    problems = payload if isinstance(payload, list) else payload.get("problems", [])
+    if not isinstance(payload, list) and "problems" not in payload:
+        raise SystemExit("No `problems` in this payload - pass the get_site_audit_problems "
+                         "result, not the overview or a report.")
+    problems = payload if isinstance(payload, list) else payload["problems"]
     assumed = parse_assumptions(args.assume)
     matrix = load_matrix()
     if not matrix:
-        print("WARNING: references/impact-effort.md not found - effort defaults to `page`.\n",
+        problem = ("has no rows in the expected table format" if os.path.exists(MATRIX)
+                   else "not found")
+        print(f"WARNING: references/impact-effort.md {problem} - effort defaults to `page`.\n",
               file=sys.stderr)
 
     scored, excluded, unweighted, inspect, ignored, blocks, remeasure = \
@@ -382,7 +389,7 @@ def rank(args):
         print("plan a new crawl as the first step; plan the fix only if the new crawl")
         print("confirms it. Not ranked:\n")
         for r in remeasure:
-            print(f"   {r['report'][:52]:52} {r['count']:>7}  ({r['delta']} new)")
+            print(f"   {r['report'][:52]:52} {r['count']:>7}  ({r['delta'] or 0} new)")
         print()
 
     if inspect:
@@ -558,7 +565,7 @@ def shape_of(value):
 
 def pattern_of(url, depth):
     """A path pattern: the first `depth` segments, with numbers generalised."""
-    path = re.sub(r"^https?://[^/]+", "", url)
+    path = re.sub(r"^https?://[^/]+", "", url).split("#", 1)[0].split("?", 1)[0]
     for rx, repl in PLACEHOLDERS:
         path = rx.sub(repl, path)
     parts = [p for p in path.split("/") if p]
@@ -570,23 +577,36 @@ def pattern_of(url, depth):
 def cluster(args):
     raw = read_json(args.report)
     # `pagination` is a sibling of `data`, so read it before unwrapping.
-    pagination = raw.get("pagination", {}) if isinstance(raw, dict) else {}
+    pagination = (raw.get("pagination") if isinstance(raw, dict) else None) or {}
     payload = unwrap(raw)
-    pagination = payload.get("pagination", pagination) if isinstance(payload, dict) else pagination
+    if isinstance(payload, dict) and payload.get("pagination"):
+        pagination = payload["pagination"]
     rows = payload if isinstance(payload, list) else payload.get("rows", payload.get("data", []))
     urls = [r["page"] for r in rows if isinstance(r, dict) and r.get("page")]
+    # Group reports (title-duplicates, description-duplicates) have no `page` on a row:
+    # a row is one shared value plus the `pages` carrying it, and those pages are the
+    # clustering evidence. `pagination.total` then counts groups, not pages.
+    groups = None
+    if not urls:
+        groups = [r for r in rows if isinstance(r, dict) and isinstance(r.get("pages"), list)]
+        urls = [u for r in groups for u in r["pages"] if isinstance(u, str) and u]
     if not urls:
         print("No `page` field in these rows - this report's rows are not pages. "
               "Check its `columns` before planning it as a page fix.")
         return
 
-    total = pagination.get("total", len(urls))
-    counts = Counter(pattern_of(u, args.depth) for u in urls)
-    top = counts.most_common(args.limit)
-
     label = args.label or "report"
-    print(f"{label}: {len(urls)} rows fetched of {total} total"
-          f"{'  (the rest were not fetched - page with limit/offset)' if total > len(urls) else ''}\n")
+    if groups:
+        groups_total = pagination.get("total") or len(groups)
+        total = len(urls)
+        print(f"{label}: {len(urls)} pages in {len(groups)} groups fetched of {groups_total} groups"
+              f"{'  (the rest were not fetched - page with limit/offset)' if groups_total > len(groups) else ''}\n")
+    else:
+        total = pagination.get("total") or len(urls)
+        print(f"{label}: {len(urls)} rows fetched of {total} total"
+              f"{'  (the rest were not fetched - page with limit/offset)' if total > len(urls) else ''}\n")
+    counts = Counter(pattern_of(u, args.depth) for u in urls)
+    top = counts.most_common(max(args.limit, 1))
     for pat, n in top:
         share = 100.0 * n / len(urls)
         print(f"{n:>5}  {share:>5.1f}%  {pat}")
@@ -603,7 +623,7 @@ def cluster(args):
     depth = args.depth
     go_deeper = head_share >= 90
     while go_deeper and top and top[0][0].endswith("/..."):
-        deeper = Counter(pattern_of(u, depth + 1) for u in urls).most_common(args.limit)
+        deeper = Counter(pattern_of(u, depth + 1) for u in urls).most_common(max(args.limit, 1))
         deeper_share = 100.0 * deeper[0][1] / len(urls)
         if deeper_share < max(args.threshold, 0.85 * head_share):
             break
@@ -616,7 +636,7 @@ def cluster(args):
     # the section they share is invisible. Show one segment shallower when that reveals it
     # (display only: the verdict below still rests on the depth asked for).
     if head_share < args.threshold and depth > 1:
-        shallow = Counter(pattern_of(u, depth - 1) for u in urls).most_common(args.limit)
+        shallow = Counter(pattern_of(u, depth - 1) for u in urls).most_common(max(args.limit, 1))
         shallow_share = 100.0 * shallow[0][1] / len(urls)
         if shallow_share >= args.threshold:
             print(f"\nOne segment shallower (depth {depth - 1}):")
@@ -663,7 +683,10 @@ def cluster(args):
     # paragraph count - and three distinct depths across thirty rows says nothing
     # about templates. Before this filter, `pages-with-high-page-depth` reported
     # "one string" because its values were 6, 5 and 4.
-    values = [v for v in (value_of(r) for r in rows) if isinstance(v, str) and v.strip()]
+    # URLs too: any two URLs on one host share the shape `w://w.w/w/w`, so a report whose
+    # value is a link target (canonical-link-target-problems) read as "one string".
+    values = [v for v in (value_of(r) for r in rows)
+              if isinstance(v, str) and v.strip() and not re.match(r"https?://", v)]
     shape_share = 0.0
     if values:
         shapes = Counter(shape_of(v) for v in values)

@@ -184,7 +184,11 @@ def scope_root(scope):
 
 
 def in_scope(row, scope):
-    return not scope or norm(row.get("best_ranking_url")).startswith(scope_root(scope))
+    # Whole path segments only: scope /de must not take in /demo/, nor example.com example.community.
+    if not scope:
+        return True
+    url, root = norm(row.get("best_ranking_url")), scope_root(scope)
+    return url.rstrip("/") == root or url.startswith(root + "/")
 
 
 # Language a market's searchers expect, from the search engine's domain.
@@ -388,8 +392,8 @@ def cmd_keywords(args):
             ])
         return
 
-    if args.screen and args.top == TOP:
-        args.top = SCREEN_TOP
+    if args.top is None:
+        args.top = SCREEN_TOP if args.screen else TOP
     print(f"# Ranking opportunities - positions {BAND_MIN}-{BAND_MAX}, the {args.top} most attractive"
           + (" candidates, screened" if args.screen else ""))
     print()
@@ -514,10 +518,13 @@ class _Promise(HTMLParser):
 def fetch_page(raw_url):
     """Fetch one page and parse what it promises. Returns a dict; `failed` or `empty` is set when
     the page could not be read, with the reason."""
-    url = html.unescape(raw_url)
+    url = html.unescape(raw_url or "")
+    page = {"url": url}
+    if not url.startswith(("http://", "https://")):
+        page["failed"] = "no ranking URL to read"
+        return page
     req = Request(url, headers={"User-Agent": BROWSER_UA, "Accept": "text/html",
                                 "Accept-Language": "de,en;q=0.8", "Accept-Encoding": "identity"})
-    page = {"url": url}
     try:
         with urlopen(req, timeout=20) as resp:
             ctype = resp.headers.get("Content-Type", "")
@@ -758,7 +765,7 @@ def run_screen(picks, ranking, scope=None):
     screened = screen_order(screened, ranking, scope)
     for i, (r, page, flags, twin) in enumerate(screened, 1):
         emit_screen(i, r, ranking, page, flags, twin)
-    kinds = Counter(k for _, _, flags, _ in screened for k in {f[0] for f in flags})
+    kinds = Counter(k for _, _, flags, _ in screened for k in sorted({f[0] for f in flags}))
     for kind, n in kinds.items():
         if n >= 2:
             names = [r["name"] for r, _, flags, _ in screened if any(f[0] == kind for f in flags)]
@@ -780,7 +787,8 @@ def cmd_serp(args):
         if n > 1:
             reasons.append(f"own URL appears {n} times ({url})")
     notes = []
-    for url, n in Counter(html.unescape(r.get("url") or "") for r in rows[:10] if not r.get("is_self")).items():
+    top10 = [r for r in rows if type(r.get("rank")) is int and r["rank"] <= 10]
+    for url, n in Counter(html.unescape(r.get("url") or "") for r in top10 if not r.get("is_self")).items():
         if n > 1:
             notes.append(f"{url} appears {n} times in the top 10 (another site's row: says nothing about your position)")
     block = 0
@@ -821,8 +829,9 @@ def cmd_serp(args):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("path", nargs="?", help="Saved list_keywords payload (JSON), or - for stdin")
-    ap.add_argument("--top", "--limit", dest="top", type=int, default=TOP,
-                    help="Keywords to pick (default 3); --limit is the old name")
+    ap.add_argument("--top", "--limit", dest="top", type=int, default=None,
+                    help=f"Keywords to pick (default {TOP}, {SCREEN_TOP} with --screen); "
+                         "--limit is the old name")
     ap.add_argument("--market", help="Restrict to one search_engine_name, e.g. Google.de")
     ap.add_argument("--since", help="Start of the comparison window (YYYY-MM-DD); rows with a later "
                                     "date_added are suspect")
